@@ -1,0 +1,98 @@
+import pygame
+import random
+import time
+pygame.init()
+WIDTH, HEIGHT = 800, 640
+TILE_SIZE = 200
+ROWS, COLS = HEIGHT // TILE_SIZE, WIDTH // TILE_SIZE
+BGCOLOR = (50, 50, 50)
+FONT = pygame.font.SysFont("verdana", 25)
+IMAGE_PATH = 'C:/Users/Admin/Desktop/Shehnaaz Begum BSc CsM/Project materials/Spaceship.jpg'
+image = pygame.image.load(IMAGE_PATH)
+image = pygame.transform.scale(image, (WIDTH, HEIGHT))
+tiles = []
+for row in range(ROWS):
+    for col in range(COLS):
+        rect = (col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        tile = image.subsurface(rect)
+        tiles.append(tile)
+grid = list(range(ROWS * COLS))
+empty_tile_index = ROWS * COLS - 1
+grid[empty_tile_index] = None
+def draw_puzzle(window):
+    for i in range(ROWS * COLS):
+        tile_index = grid[i]
+        if tile_index is not None:
+            row = i // COLS
+            col = i % COLS
+            window.blit(tiles[tile_index], (col * TILE_SIZE, row * TILE_SIZE + VERTICAL_OFFSET))
+def draw_text(window, text, pos, color=(255, 255, 255)):
+    text_surface = FONT.render(text, True, color)
+    window.blit(text_surface, pos)
+def is_solved():
+    return grid[:-1] == list(range(ROWS * COLS - 1))
+def slide_tile(row, col):
+    global empty_tile_index
+    empty_row, empty_col = divmod(empty_tile_index, COLS)
+    if (abs(row - empty_row) == 1 and col == empty_col) or (row == empty_row and abs(col - empty_col) == 1):
+        grid[empty_row * COLS + empty_col], grid[row * COLS + col] = grid[row * COLS + col], grid[empty_row * COLS + empty_col]
+        empty_tile_index = row * COLS + col
+def shuffle_tiles():
+    global empty_tile_index
+    moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    for _ in range(20):
+        empty_row, empty_col = divmod(empty_tile_index, COLS)
+        valid_moves = []
+        for move in moves:
+            new_row, new_col = empty_row + move[0], empty_col + move[1]
+            if 0 <= new_row < ROWS and 0 <= new_col < COLS:
+                valid_moves.append((new_row, new_col))
+        if valid_moves:
+            row, col = random.choice(valid_moves)
+            slide_tile(row, col)
+            empty_tile_index = row * COLS + col
+VERTICAL_OFFSET = 50
+def display_solved(window):
+    window.blit(image, (0, 0))
+    draw_text(window, "Solved!", (WIDTH // 2 - 50, HEIGHT // 2), color=(0, 0, 0))
+def main():
+    shuffle_tiles()
+    window = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Sliding Jigsaw Puzzle with Timer")
+    clock = pygame.time.Clock()
+    solved = False
+    start_time = time.time()
+    timer_duration = 5 * 60
+    running = True
+    while running:
+        clock.tick(60)
+        window.fill((50, 50, 50))
+        timer_area_height = 50
+        pygame.draw.rect(window, (0, 0, 0), (0, 0, WIDTH, timer_area_height))
+        if not solved:
+            draw_puzzle(window)
+            elapsed_time = time.time() - start_time
+            remaining_time = max(0, timer_duration - int(elapsed_time))
+            minutes = remaining_time // 60
+            seconds = remaining_time % 60
+            time_text = f"Time left: {minutes:02}:{seconds:02}"
+            draw_text(window, time_text, (10, 10))
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.MOUSEBUTTONDOWN and not solved:
+                    mouse_x, mouse_y = event.pos
+                    col = mouse_x // TILE_SIZE
+                    row = (mouse_y - timer_area_height) // TILE_SIZE
+                    slide_tile(row, col)
+            if not solved and is_solved():
+                solved = True
+        else:
+            display_solved(window)
+        if remaining_time == 0:
+            draw_text(window, "Time's up!", (WIDTH // 2 - 100, HEIGHT // 2 + 40), color=(255, 0, 0))
+            running = False
+        pygame.display.flip()
+    pygame.quit()
+if __name__ == '__main__':
+    main()
